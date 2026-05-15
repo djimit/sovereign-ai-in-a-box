@@ -1,0 +1,17 @@
+[Unit]
+Description=Overwatch Monitor — Container health + self-healing + Telegram alerts
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/djimit/DjimIT/scripts/overwatch-monitor.py
+Restart=always
+RestartSec=30
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/djimit/workspace/ag2/.env
+StandardOutput=append:/home/djimit/workspace/logs/overwatch-monitor.log
+StandardError=append:/home/djimit/workspace/logs/overwatch-monitor.log
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Emergent Communication API — Concept extraction + shared vocabulary
+After=network-online.target qdrant.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/djimit/DjimIT/emergent-communication.py --serve
+Restart=always
+RestartSec=15
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=append:/home/djimit/workspace/logs/emergent-comm.log
+StandardError=append:/home/djimit/workspace/logs/emergent-comm.log
+
+[Install]
+WantedBy=default.target
