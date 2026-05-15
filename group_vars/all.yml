@@ -27,7 +27,9 @@ ollama_models_dir: "{{ data_root }}/ollama/models"
 openwebui_data: "{{ data_root }}/openwebui"
 litellm_config_dir: "{{ data_root }}/litellm"
 
-# UFW: alleen LAN mag bij de services
+# WebUI secret key — genereer unieke waarde, bewaar deze over deploys
+# Genereer met: openssl rand -hex 32
+webui_secret_key: "changeme-generate-with-openssl-rand-hex-32"
 allowed_ports:
   - port: "{{ ollama_port }}"
     comment: "Ollama API"

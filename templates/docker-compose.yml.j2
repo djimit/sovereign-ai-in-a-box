@@ -13,6 +13,7 @@ services:
     environment:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_HOST=0.0.0.0:{{ ollama_port }}
+{% if has_nvidia_gpu | default(false) %}
     deploy:
       resources:
         reservations:
@@ -20,6 +21,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+{% endif %}
     {% if ollama_memory_limit %}
     mem_limit: {{ ollama_memory_limit }}
     {% endif %}
@@ -64,7 +66,7 @@ services:
       - WEBUI_NAME={{ webui_site_name | default("AI-in-a-Box") }}
       - ENABLE_SIGNUP=false
       - DEFAULT_USER_ROLE=user
-      - WEBUI_SECRET_KEY={{ webui_secret_key | default(ansible_machine_id) }}
+      - WEBUI_SECRET_KEY={{ webui_secret_key }}
     {% if openwebui_memory_limit %}
     mem_limit: {{ openwebui_memory_limit }}
     {% endif %}

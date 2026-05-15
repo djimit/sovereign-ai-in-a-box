@@ -12,15 +12,18 @@ echo "[$(date)] Starting backup..." | tee -a "$LOG"
 
 # ─── Qdrant snapshot ────────────────────────────
 echo "Creating Qdrant snapshot..."
-curl -s -X POST "http://localhost:{{ qdrant_port }}/collections/knowledge_base/snapshots" \
-  | jq -r '.result.name' > /tmp/qdrant_snapshot_name
-SNAP_NAME=$(cat /tmp/qdrant_snapshot_name)
-mkdir -p "$BACKUP_DIR/qdrant"
+SNAP_RESPONSE=$(curl -s -X POST "http://localhost:{{ qdrant_port }}/collections/knowledge_base/snapshots" 2>/dev/null)
+SNAP_NAME=$(echo "$SNAP_RESPONSE" | jq -r '.result.name // empty' 2>/dev/null)
 
-# Wacht op snapshot en download
-sleep 5
-curl -s "http://localhost:{{ qdrant_port }}/collections/knowledge_base/snapshots/$SNAP_NAME" \
-  -o "$BACKUP_DIR/qdrant/$SNAP_NAME"
+if [ -n "$SNAP_NAME" ] && [ "$SNAP_NAME" != "null" ]; then
+  mkdir -p "$BACKUP_DIR/qdrant"
+  sleep 3
+  curl -s "http://localhost:{{ qdrant_port }}/collections/knowledge_base/snapshots/$SNAP_NAME" \
+    -o "$BACKUP_DIR/qdrant/$SNAP_NAME" 2>/dev/null
+  echo "  Snapshot: $SNAP_NAME"
+else
+  echo "  ⚠️  Geen knowledge_base collection — Qdrant backup overgeslagen"
+fi
 
 # ─── Open WebUI data ────────────────────────────
 echo "Backing up Open WebUI data..."
