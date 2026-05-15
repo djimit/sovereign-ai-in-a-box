@@ -1,0 +1,39 @@
+# Standaardwaarden — override in inventory.yml
+
+# Docker versies (getagd voor reproduceerbaarheid)
+ollama_version: "latest"
+qdrant_version: "v1.14"
+openwebui_version: "main"
+litellm_version: "main-latest"
+
+# Poorten (alleen LAN-accessible via UFW)
+ollama_port: 11434
+qdrant_port: 6333
+qdrant_grpc_port: 6334
+openwebui_port: 3000
+litellm_port: 4000
+prometheus_node_exporter_port: 9100
+
+# Resource limieten
+ollama_memory_limit: "24g"
+qdrant_memory_limit: "2g"
+openwebui_memory_limit: "1g"
+litellm_memory_limit: "512m"
+
+# Data paden
+data_root: "/opt/ai-in-a-box"
+qdrant_storage: "{{ data_root }}/qdrant"
+ollama_models_dir: "{{ data_root }}/ollama/models"
+openwebui_data: "{{ data_root }}/openwebui"
+litellm_config_dir: "{{ data_root }}/litellm"
+
+# UFW: alleen LAN mag bij de services
+allowed_ports:
+  - port: "{{ ollama_port }}"
+    comment: "Ollama API"
+  - port: "{{ qdrant_port }}"
+    comment: "Qdrant REST"
+  - port: "{{ openwebui_port }}"
+    comment: "Open WebUI"
+  - port: "{{ litellm_port }}"
+    comment: "LiteLLM proxy"

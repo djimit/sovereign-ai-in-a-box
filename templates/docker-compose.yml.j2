@@ -1,0 +1,99 @@
+# Jinja2 template — word gegenereerd met ansible variables
+# Bestemming: {{ docker_compose_dir }}/docker-compose.yml
+
+services:
+  # ─── Ollama ───────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:{{ ollama_version }}
+    container_name: ollama
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - {{ ollama_models_dir }}:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0:{{ ollama_port }}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    {% if ollama_memory_limit %}
+    mem_limit: {{ ollama_memory_limit }}
+    {% endif %}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Qdrant ───────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:{{ qdrant_version }}
+    container_name: qdrant
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - {{ qdrant_storage }}:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT={{ qdrant_port }}
+      - QDRANT__SERVICE__GRPC_PORT={{ qdrant_grpc_port }}
+      - QDRANT__LOG_LEVEL=INFO
+    {% if qdrant_memory_limit %}
+    mem_limit: {{ qdrant_memory_limit }}
+    {% endif %}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Open WebUI ───────────────────────────────────────
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:{{ openwebui_version }}
+    container_name: open-webui
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - {{ openwebui_data }}:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://localhost:{{ ollama_port }}
+      - WEBUI_AUTH=true
+      - WEBUI_NAME={{ webui_site_name | default("AI-in-a-Box") }}
+      - ENABLE_SIGNUP=false
+      - DEFAULT_USER_ROLE=user
+      - WEBUI_SECRET_KEY={{ webui_secret_key | default(ansible_machine_id) }}
+    {% if openwebui_memory_limit %}
+    mem_limit: {{ openwebui_memory_limit }}
+    {% endif %}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── LiteLLM Proxy ────────────────────────────────────
+  litellm:
+    image: ghcr.io/berriai/litellm:{{ litellm_version }}
+    container_name: litellm-proxy
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - {{ litellm_config_dir }}/config.yaml:/app/config.yaml:ro
+    environment:
+      - LITELLM_MASTER_KEY={{ litellm_master_key | default(ansible_machine_id) }}
+      - ANTHROPIC_API_KEY={{ cloud_api_keys.anthropic | default('') }}
+      - OPENAI_API_KEY={{ cloud_api_keys.openai | default('') }}
+      - OLLAMA_CLOUD_BASE={{ ollama_cloud_base | default('') }}
+      - OLLAMA_API_KEY={{ ollama_cloud_key | default('') }}
+    command: ["--config", "/app/config.yaml", "--port", "{{ litellm_port }}"]
+    {% if litellm_memory_limit %}
+    mem_limit: {{ litellm_memory_limit }}
+    {% endif %}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

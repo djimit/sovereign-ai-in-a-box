@@ -1,0 +1,250 @@
+---
+# Sovereign AI-in-a-Box — Ansible Playbook v0.1.0
+#
+# Provisioned een complete, BIO2-compliant, on-premise AI-stack
+# voor Nederlandse overheidsorganisaties op Ubuntu 24.04.
+#
+# Doel: één commando → werkende AI-infrastructuur met:
+#   - Ollama (lokaal LLM inference)
+#   - Qdrant (vector database)
+#   - Open WebUI (gebruikersinterface)
+#   - LiteLLM (proxy met budget controls)
+#   - Prometheus node_exporter (monitoring)
+#   - UFW firewall (LAN-only, BIO2-conform)
+#   - Backup script (NAS/S3)
+#
+# Gebruik:
+#   cp inventory.example.yml inventory.yml
+#   # Pas inventory.yml aan
+#   ansible-playbook -i inventory.yml sovereign-ai-in-a-box.yml
+
+- name: Sovereign AI-in-a-Box — Basis systeem
+  hosts: all
+  become: yes
+  vars:
+    docker_compose_dir: "{{ data_root }}/compose"
+  tasks:
+
+    # ============================================================
+    # 1. SYSTEEM UPDATES & BASIS PAKKETTEN
+    # ============================================================
+    - name: Apt cache updaten
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Basis systeempakketten installeren
+      apt:
+        name:
+          - curl
+          - wget
+          - gnupg
+          - ca-certificates
+          - lsb-release
+          - ufw
+          - acl
+          - nfs-common
+          - restic
+          - unzip
+          - jq
+        state: present
+
+    - name: Tijdzone op Europe/Amsterdam
+      timezone:
+        name: Europe/Amsterdam
+
+    # ============================================================
+    # 2. DOCKER INSTALLATIE
+    # ============================================================
+    - name: Docker APT repository key toevoegen
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Docker APT repository toevoegen
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Docker + NVIDIA Container Toolkit installeren
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+          - nvidia-container-toolkit
+        state: present
+      notify: restart docker
+
+    - name: Docker service starten
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Beheerder in docker groep
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: NVIDIA Container Toolkit runtime configureren
+      command: nvidia-ctk runtime configure --runtime=docker
+      changed_when: false
+
+    # ============================================================
+    # 3. DIRECTORY STRUCTUUR
+    # ============================================================
+    - name: Data directories aanmaken
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+      loop:
+        - "{{ data_root }}"
+        - "{{ docker_compose_dir }}"
+        - "{{ qdrant_storage }}"
+        - "{{ ollama_models_dir }}"
+        - "{{ openwebui_data }}"
+        - "{{ litellm_config_dir }}"
+        - "{{ data_root }}/backups"
+        - "{{ data_root }}/logs"
+
+    # ============================================================
+    # 4. UFW FIREWALL — LAN-only, BIO2 BBN2
+    # ============================================================
+    - name: UFW standaard policy — deny incoming
+      ufw:
+        direction: incoming
+        policy: deny
+
+    - name: UFW standaard policy — allow outgoing
+      ufw:
+        direction: outgoing
+        policy: allow
+
+    - name: SSH vanaf admin IPs toestaan
+      ufw:
+        rule: allow
+        port: "22"
+        src: "{{ item }}"
+        comment: "SSH admin"
+      loop: "{{ admin_ips }}"
+
+    - name: AI services alleen vanaf LAN toestaan
+      ufw:
+        rule: allow
+        port: "{{ item.port }}"
+        src: "{{ lan_network }}"
+        comment: "{{ item.comment }}"
+      loop: "{{ allowed_ports }}"
+
+    - name: UFW aanzetten
+      ufw:
+        state: enabled
+
+    # ============================================================
+    # 5. DOCKER COMPOSE — AI STACK
+    # ============================================================
+    - name: Docker Compose bestand deployen
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ docker_compose_dir }}/docker-compose.yml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+    - name: LiteLLM config deployen
+      template:
+        src: litellm-config.yaml.j2
+        dest: "{{ litellm_config_dir }}/config.yaml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+    - name: AI stack starten
+      docker_compose:
+        project_src: "{{ docker_compose_dir }}"
+        state: present
+        pull: yes
+
+    # ============================================================
+    # 6. OLLAMA MODELLEN PRE-PULLEN
+    # ============================================================
+    - name: Wachten tot Ollama API bereikbaar is
+      uri:
+        url: "http://localhost:{{ ollama_port }}/api/tags"
+        method: GET
+      register: ollama_ready
+      until: ollama_ready.status == 200
+      retries: 30
+      delay: 10
+
+    - name: Modellen pullen (kan lang duren)
+      command: "docker exec ollama ollama pull {{ item }}"
+      loop: "{{ ollama_models }}"
+      register: model_pull
+      async: 3600
+      poll: 10
+      tags: models
+
+    # ============================================================
+    # 7. BACKUP SCRIPT + CRON
+    # ============================================================
+    - name: Backup script installeren
+      template:
+        src: backup.sh.j2
+        dest: "{{ data_root }}/backup.sh"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Dagelijkse backup cron job (04:00)
+      cron:
+        name: "ai-in-a-box daily backup"
+        hour: "4"
+        minute: "0"
+        job: "{{ data_root }}/backup.sh >> {{ data_root }}/logs/backup.log 2>&1"
+        user: "{{ ansible_user }}"
+      when: backup_target is defined and backup_target | length > 0
+
+    # ============================================================
+    # 8. MONITORING — PROMETHEUS NODE EXPORTER
+    # ============================================================
+    - name: Node exporter container starten
+      docker_container:
+        name: node-exporter
+        image: prom/node-exporter:latest
+        network_mode: host
+        restart_policy: unless-stopped
+        command:
+          - "--path.rootfs=/host"
+          - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+|var/lib/lxcfs/.+)($$|/)"
+        volumes:
+          - "/:/host:ro,rslave"
+        memory: "128m"
+
+    - name: Health check endpoint script
+      copy:
+        content: |
+          #!/bin/bash
+          # Eenvoudige health check — draait lokaal op de node
+          echo "=== AI-in-a-Box Health $(date) ==="
+          docker ps --format '{{.Names}} {{.Status}}' | grep -E 'ollama|qdrant|open-webui|litellm|node-exporter'
+          echo "Disk: $(df -h {{ data_root }} | tail -1 | awk '{print $5 " used, " $4 " free"}')"
+          echo "Ollama: $(curl -s http://localhost:11434/api/tags | jq '.models | length') modellen"
+          echo "Qdrant: $(curl -s http://localhost:6333/collections | jq '.result.collections | length') collections"
+        dest: "{{ data_root }}/health-check.sh"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+  handlers:
+    - name: restart docker
+      systemd:
+        name: docker
+        state: restarted

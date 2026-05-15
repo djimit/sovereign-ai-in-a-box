@@ -1,0 +1,42 @@
+# Sovereign AI-in-a-Box — Inventory
+# Kopieer naar inventory.yml en pas aan voor jouw omgeving
+
+all:
+  hosts:
+    ai-node:
+      ansible_host: 192.168.1.100
+      ansible_user: beheerder
+      ansible_become: yes
+
+  vars:
+    # --- Netwerk ---
+    lan_network: "192.168.1.0/24"
+    admin_ips:
+      - "192.168.1.10"
+
+    # --- Schijf ---
+    data_mount_point: "/data"
+    backup_target: "nfs://nas.internal/backups"  # of s3://, of leeg laten
+
+    # --- Ollama modellen (worden gepulled na installatie) ---
+    ollama_models:
+      - "llama3.1:8b"
+      - "nomic-embed-text"
+      - "qwen2.5:14b"        # sterk NL model, optioneel
+      # - "mistral:7b"        # licht, snel
+
+    # --- LiteLLM budget (€/dag) ---
+    litellm_max_budget: 10
+    litellm_budget_duration: "1d"
+
+    # --- Open WebUI admin account ---
+    webui_admin_email: "admin@organisatie.nl"
+
+    # --- BIO2-classificatie ---
+    bio2_classification: "BBN2"  # of BBN3 voor Rechtspraak/strafrechtketen
+
+    # --- Optioneel: Cloud model API keys ---
+    # Zet in ansible-vault of als secrets in CI/CD
+    cloud_api_keys:
+      anthropic: ""    # voor claude-sonnet-4-6 fallback (optioneel)
+      openai: ""       # voor gpt-4o fallback (optioneel)

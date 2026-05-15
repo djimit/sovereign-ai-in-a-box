@@ -1,0 +1,67 @@
+#!/bin/bash
+# Sovereign AI-in-a-Box — Backup script
+# Gegenereerd door Ansible — pas backup_target aan in inventory.yml
+set -euo pipefail
+
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_DIR="{{ data_root }}/backups/$TIMESTAMP"
+LOG="{{ data_root }}/logs/backup.log"
+RETENTION_DAYS=30
+
+echo "[$(date)] Starting backup..." | tee -a "$LOG"
+
+# ─── Qdrant snapshot ────────────────────────────
+echo "Creating Qdrant snapshot..."
+curl -s -X POST "http://localhost:{{ qdrant_port }}/collections/knowledge_base/snapshots" \
+  | jq -r '.result.name' > /tmp/qdrant_snapshot_name
+SNAP_NAME=$(cat /tmp/qdrant_snapshot_name)
+mkdir -p "$BACKUP_DIR/qdrant"
+
+# Wacht op snapshot en download
+sleep 5
+curl -s "http://localhost:{{ qdrant_port }}/collections/knowledge_base/snapshots/$SNAP_NAME" \
+  -o "$BACKUP_DIR/qdrant/$SNAP_NAME"
+
+# ─── Open WebUI data ────────────────────────────
+echo "Backing up Open WebUI data..."
+if docker ps --format '{{.Names}}' | grep -q open-webui; then
+  docker stop open-webui
+  cp -r {{ openwebui_data }} "$BACKUP_DIR/openwebui-data"
+  docker start open-webui
+else
+  # Container gestopt? Direct kopiëren
+  cp -r {{ openwebui_data }} "$BACKUP_DIR/openwebui-data" 2>/dev/null || true
+fi
+
+# ─── LiteLLM config ─────────────────────────────
+echo "Backing up LiteLLM config..."
+cp {{ litellm_config_dir }}/config.yaml "$BACKUP_DIR/litellm-config.yaml"
+
+# ─── Compress archive ────────────────────────────
+echo "Compressing backup..."
+cd "$BACKUP_DIR/.."
+tar -czf "$TIMESTAMP.tar.gz" "$TIMESTAMP"
+rm -rf "$TIMESTAMP"
+
+# ─── Push naar externe target (indien geconfigureerd) ──
+{% if backup_target is defined and backup_target | length > 0 %}
+echo "Pushing to {{ backup_target }}..."
+BACKUP_FILE="{{ data_root }}/backups/$TIMESTAMP.tar.gz"
+
+# Restic: idempotent, encrypted, deduplicated
+restic -r {{ backup_target }} backup "$BACKUP_FILE" \
+  --tag "ai-in-a-box" \
+  --host "{{ inventory_hostname }}" \
+  2>&1 | tee -a "$LOG"
+
+# Restic retention: 30 daily snapshots
+restic -r {{ backup_target }} forget \
+  --keep-daily "$RETENTION_DAYS" \
+  --prune 2>&1 | tee -a "$LOG"
+{% endif %}
+
+# ─── Lokaal opschonen ───────────────────────────
+echo "Cleaning local backups older than $RETENTION_DAYS days..."
+find {{ data_root }}/backups -name "*.tar.gz" -mtime +$RETENTION_DAYS -delete
+
+echo "[$(date)] Backup complete." | tee -a "$LOG"

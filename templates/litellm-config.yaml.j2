@@ -1,0 +1,78 @@
+# LiteLLM Proxy Configuratie — Jinja2 template
+# Bestemming: {{ litellm_config_dir }}/config.yaml
+#
+# BIO2-uitgangspunten:
+# - Budget cap voorkomt onverwachte cloud kosten
+# - Fallback naar lokaal model als cloud faalt (beschikbaarheid)
+# - Rate limits beschermen lokale resources
+# - Geen logging van prompt/content naar externe diensten
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  request_timeout: 120
+
+model_list:
+  # --- Lokale modellen (gratis) — primair voor dagelijks gebruik ---
+  - model_name: llama3.1:8b
+    litellm_params:
+      model: ollama/llama3.1:8b
+      api_base: http://localhost:{{ ollama_port }}
+      rpm: 120
+    model_info:
+      mode: chat
+      supports_function_calling: true
+
+  - model_name: nomic-embed-text
+    litellm_params:
+      model: ollama/nomic-embed-text
+      api_base: http://localhost:{{ ollama_port }}
+      rpm: 300
+    model_info:
+      mode: embedding
+
+{% if cloud_api_keys.anthropic | length > 0 %}
+  # --- Cloud modellen — alleen voor complexe taken ---
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+      rpm: 30
+    model_info:
+      mode: chat
+      supports_function_calling: true
+{% endif %}
+
+{% if cloud_api_keys.openai | length > 0 %}
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+      rpm: 20
+    model_info:
+      mode: chat
+{% endif %}
+
+litellm_settings:
+  # HARD BUDGET CAP — voorkomt financiële verrassingen
+  max_budget: {{ litellm_max_budget }}
+  budget_duration: {{ litellm_budget_duration }}
+
+  # Fallback: cloud → lokaal (beschikbaarheid)
+  num_retries: 2
+  fallbacks:
+{% if cloud_api_keys.anthropic | length > 0 %}
+    - claude-sonnet-4-6: [llama3.1:8b]
+{% endif %}
+{% if cloud_api_keys.openai | length > 0 %}
+    - gpt-4o: [llama3.1:8b]
+{% endif %}
+
+router_settings:
+  routing_strategy: "usage-based-routing"
+  enable_pre_call_checks: true
+  allowed_fails: 3
+  allowed_fails_policy:
+    BadRequestErrorAllowedFails: 0
+    AuthenticationErrorAllowedFails: 0
+    RateLimitErrorAllowedFails: 5
+    ContentPolicyViolationErrorAllowedFails: 0
