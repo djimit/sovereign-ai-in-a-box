@@ -74,7 +74,7 @@ Als de pilot succesvol is, zijn er drie paden:
 
 Een vrijblijvend gesprek over wat AI voor uw organisatie kan betekenen:
 
-- **Mail:** consulting@djimit.nl
+- **Contact:** djimit.nl/contact
 - **Website:** djimit.nl/kennismaking
 - **Telefoon:** [nummer]
 

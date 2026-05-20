@@ -30,7 +30,7 @@ all:
     litellm_budget_duration: "1d"
 
     # --- Open WebUI admin account ---
-    webui_admin_email: "admin@organisatie.nl"
+    webui_admin_email: "admin@example.com"
 
     # --- BIO2-classificatie ---
     bio2_classification: "BBN2"  # of BBN3 voor Rechtspraak/strafrechtketen

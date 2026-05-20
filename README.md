@@ -85,7 +85,7 @@ DjimIT B.V. biedt:
 - **Use-case ontwikkeling**: custom RAG pipelines, agent workflows
 - **Doorontwikkeling**: opmaat naar multi-node, federated learning
 
-Contact: consulting@djimit.nl | djimit.nl
+Contact: djimit.nl/contact
 
 ## Licentie
 

@@ -48,4 +48,4 @@ DjimIT B.V. biedt als aanvullend dienstenpakket:
 - IAMA begeleiding
 - DPIA met AI-component (via `gdpr-dpia` plugin)
 
-Contact: consulting@djimit.nl
+Contact: djimit.nl/contact
