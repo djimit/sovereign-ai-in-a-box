@@ -352,7 +352,7 @@ def main():
                         f"Pogingen: {attempt_num}\n"
                         f"Laatste actie: `{REPAIR_COMMANDS.get(name, f'docker restart {name}')}`\n\n"
                         f"Handmatige interventie nodig:\n"
-                        f"`ssh djimit@192.168.1.28 'docker logs {name} --tail 50'`"
+                        f"`ssh <YOUR_USER>@<WORKSTATION_IP> 'docker logs {name} --tail 50'`"
                     )
                     telegram_send(alert_msg)
                     log(f"  🚨 CRITICAL alert sent for {name}")

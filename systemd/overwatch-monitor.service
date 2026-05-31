@@ -5,13 +5,15 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/home/djimit/DjimIT/scripts/overwatch-monitor.py
+# Override paths via environment or .env on the workstation
+# Defaults assume: EXEC_HOME=/home/<YOUR_USER>
+ExecStart=/home/<YOUR_USER>/DjimIT/scripts/overwatch-monitor.py
 Restart=always
 RestartSec=30
 Environment=PYTHONUNBUFFERED=1
-EnvironmentFile=/home/djimit/workspace/ag2/.env
-StandardOutput=append:/home/djimit/workspace/logs/overwatch-monitor.log
-StandardError=append:/home/djimit/workspace/logs/overwatch-monitor.log
+EnvironmentFile=/home/<YOUR_USER>/workspace/ag2/.env
+StandardOutput=append:/home/<YOUR_USER>/workspace/logs/overwatch-monitor.log
+StandardError=append:/home/<YOUR_USER>/workspace/logs/overwatch-monitor.log
 
 [Install]
 WantedBy=default.target

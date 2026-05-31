@@ -5,12 +5,14 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /home/djimit/DjimIT/emergent-communication.py --serve
+# Override EXEC_HOME and EXEC_SCRIPT via environment or .env
+# Defaults: EXEC_HOME=/home/<YOUR_USER>, EXEC_SCRIPT=DjimIT/emergent-communication.py
+ExecStart=/usr/bin/python3 /home/<YOUR_USER>/DjimIT/emergent-communication.py --serve
 Restart=always
 RestartSec=15
 Environment=PYTHONUNBUFFERED=1
-StandardOutput=append:/home/djimit/workspace/logs/emergent-comm.log
-StandardError=append:/home/djimit/workspace/logs/emergent-comm.log
+StandardOutput=append:/home/<YOUR_USER>/workspace/logs/emergent-comm.log
+StandardError=append:/home/<YOUR_USER>/workspace/logs/emergent-comm.log
 
 [Install]
 WantedBy=default.target
