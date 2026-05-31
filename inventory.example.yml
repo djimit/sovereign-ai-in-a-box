@@ -4,19 +4,19 @@
 all:
   hosts:
     ai-node:
-      ansible_host: 192.168.1.100
+      ansible_host: 192.168.X.X  # vervang met jouw server IP
       ansible_user: beheerder
       ansible_become: yes
 
   vars:
     # --- Netwerk ---
-    lan_network: "192.168.1.0/24"
+    lan_network: "192.168.X.0/24"
     admin_ips:
-      - "192.168.1.10"
+      - "192.168.X.1"
 
     # --- Schijf ---
     data_mount_point: "/data"
-    backup_target: "nfs://nas.internal/backups"  # of s3://, of leeg laten
+    backup_target: "nfs://nas.internal/backups"  # of s3://, of leeg laten; vervang met jouw NAS hostname
 
     # --- Ollama modellen (worden gepulled na installatie) ---
     ollama_models:

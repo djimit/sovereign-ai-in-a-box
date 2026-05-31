@@ -2,7 +2,7 @@
 
 > See root `.github/copilot-instructions.md` for global conventions.
 
-AI workstation deployment playbook en Overwatch monitoring configuratie. Bevat systemd units, deploy scripts, self-healing modules, en incident tracking voor de Linux workstation (192.168.1.28).
+AI workstation deployment playbook en Overwatch monitoring configuratie. Bevat systemd units, deploy scripts, self-healing modules, en incident tracking voor de Linux workstation (<WORKSTATION_IP>).
 
 ## Structure
 
@@ -36,7 +36,7 @@ DEPLOY-STATUS.md                            # Huidige deploy status en open take
 ./scripts/deploy-overwatch.sh
 
 # Service file kopiëren
-scp -i ~/.ssh/workstation_hermes systemd/overwatch-monitor.service djimit@192.168.1.28:/tmp/
+scp -i ~/.ssh/<YOUR_SSH_KEY> systemd/overwatch-monitor.service <YOUR_USER>@<WORKSTATION_IP>:/tmp/
 
 # Op workstation:
 sudo cp /tmp/overwatch-monitor.service /etc/systemd/system/
@@ -45,7 +45,7 @@ sudo systemctl enable overwatch-monitor
 sudo systemctl restart overwatch-monitor
 
 # Logs checken
-tail -20 /home/djimit/workspace/logs/overwatch-monitor.log
+tail -20 /home/<YOUR_USER>/workspace/logs/overwatch-monitor.log
 
 # Incident store inspecteren (op workstation)
 python3 scripts/incident_store.py --list

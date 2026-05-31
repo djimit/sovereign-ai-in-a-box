@@ -27,9 +27,10 @@ ollama_models_dir: "{{ data_root }}/ollama/models"
 openwebui_data: "{{ data_root }}/openwebui"
 litellm_config_dir: "{{ data_root }}/litellm"
 
-# WebUI secret key — genereer unieke waarde, bewaar deze over deploys
+# WebUI secret key — MOET uniek zijn per deploy, bewaar deze over deploys heen
 # Genereer met: openssl rand -hex 32
-webui_secret_key: "changeme-generate-with-openssl-rand-hex-32"
+# WAARSCHUWING: verander deze NIET naar een zwakke waarde in productie
+webui_secret_key: "REPLACE_ME: generate with openssl rand -hex 32"
 allowed_ports:
   - port: "{{ ollama_port }}"
     comment: "Ollama API"

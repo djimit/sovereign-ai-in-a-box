@@ -1,1 +1,22 @@
 .retries/
+*.env
+DEPLOY-STATUS.md
+
+# Secrets — nooit tracken
+*.key
+*.pem
+*.p12
+*.pfx
+*.secret
+inventory.yml
+.overwatch.env
+*.key
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Ansible retry files
+*.retry
