@@ -10,7 +10,6 @@ DEPLOY-STATUS.md
 *.secret
 inventory.yml
 .overwatch.env
-*.key
 
 # OS / editor
 .DS_Store
@@ -20,3 +19,8 @@ inventory.yml
 
 # Ansible retry files
 *.retry
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
