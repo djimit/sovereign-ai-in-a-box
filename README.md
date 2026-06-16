@@ -87,6 +87,9 @@ DjimIT B.V. biedt:
 
 Contact: djimit.nl/contact
 
+[Ollama OpenCode 03062026.pdf](https://github.com/user-attachments/files/29007855/Ollama.OpenCode.03062026.pdf)
+
+
 ## Licentie
 
 MIT — de stack is open source. DjimIT B.V. verdient aan consulting, niet aan softwarelicenties.
