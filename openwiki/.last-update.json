@@ -1,0 +1,7 @@
+{
+  "updatedAt": "2026-10-10T14:06:48.543Z",
+  "command": "update",
+  "model": "anthropic/claude-sonnet-5",
+  "status": "interrupted",
+  "language": "en"
+}
